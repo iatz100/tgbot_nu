@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Library • Firestore</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* =========================================
+       ROOT VARIABLES
+    ========================================= */
+    :root {
+      --text-color: #222222;
+      --muted-color: #777777;
+      --card-color: #ffffff;
+      --border-color: #eeeeee;
+      --primary-color: #7b3ff2;
+      --primary-dark: #6025ce;
+      --success-color: #16a34a;
+      --body-gradient:
+        linear-gradient(
+          135deg,
+          rgba(255, 99, 132, 0.10),
+          rgba(255, 193, 7, 0.10),
+          rgba(156, 39, 176, 0.10),
+          rgba(76, 175, 80, 0.10)
+        );
+    }
+
+    /* =========================================
+       BASIC RESET
+    ========================================= */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: "Noto Sans Bengali", sans-serif;
+      color: var(--text-color);
+      background: var(--body-gradient);
+      background-size: 400% 400%;
+      animation: bodyGradientMovement 60s ease-in-out infinite;
+      transition: background 3s ease-in-out;
+      overflow-x: hidden;
+    }
+
+    /* =========================================
+       BODY GRADIENT MOVEMENT
+    ========================================= */
+    @keyframes bodyGradientMovement {
+      0% { background-position: 0% 50%; }
+      25% { background-position: 50% 100%; }
+      50% { background-position: 100% 50%; }
+      75% { background-position: 50% 0%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* =========================================
+       MAIN APP
+    ========================================= */
+    .app {
+      width: 100%;
+      max-width: 1150px;
+      margin: 0 auto;
+      padding: 18px 12px 35px;
+    }
+
+    /* =========================================
+       ANNOUNCEMENT MARQUEE
+    ========================================= */
+    .announcement {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 13px;
+      margin-bottom: 18px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid rgba(123, 63, 242, 0.12);
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.04);
+      overflow: hidden;
+    }
+
+    .announcement-icon {
+      width: 32px;
+      min-width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: #fff3cd;
+      font-size: 17px;
+    }
+
+    .marquee-wrapper {
+      flex: 1;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .marquee-text {
+      display: inline-block;
+      color: #555555;
+      font-size: 13px;
+      font-weight: 500;
+      padding-left: 100%;
+      animation: marqueeAnimation 18s linear infinite;
+    }
+
+    @keyframes marqueeAnimation {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-100%); }
+    }
+
+    /* =========================================
+       PUBLISHER FILTER
+    ========================================= */
+    .publisher-filter {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 22px;
+      overflow-x: auto;
+      padding: 3px 1px 8px;
+      scrollbar-width: none;
+    }
+
+    .publisher-filter::-webkit-scrollbar {
+      display: none;
+    }
+
+    .publisher-btn {
+      flex-shrink: 0;
+      border: 1px solid rgba(123, 63, 242, 0.20);
+      background: rgba(255, 255, 255, 0.82);
+      color: #555555;
+      border-radius: 30px;
+      padding: 9px 18px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+    }
+
+    .publisher-btn.active {
+      color: #ffffff;
+      background: var(--primary-color);
+      border-color: var(--primary-color);
+      box-shadow: 0 4px 12px rgba(123, 63, 242, 0.20);
+    }
+
+    .publisher-btn:hover {
+      border-color: var(--primary-color);
+    }
+
+    /* =========================================
+       PDF GRID
+    ========================================= */
+    .pdf-grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 13px;
+      align-items: stretch;
+    }
+
+    /* =========================================
+       PDF CARD
+    ========================================= */
+    .pdf-card {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+      border-radius: 17px;
+      background: rgba(255, 255, 255, 0.90);
+      border: 1px solid rgba(0, 0, 0, 0.055);
+      box-shadow: 0 5px 18px rgba(0, 0, 0, 0.055);
+      overflow: hidden;
+      transition: box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+
+    .pdf-card:hover {
+      border-color: rgba(123, 63, 242, 0.18);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.09);
+    }
+
+    /* =========================================
+       CARD TOP
+    ========================================= */
+    .pdf-card-top {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 112px;
+      margin-bottom: 10px;
+      border-radius: 12px;
+      background: linear-gradient(145deg, rgba(123, 63, 242, 0.08), rgba(255, 193, 7, 0.08));
+    }
+
+    /* =========================================
+       FREE BADGE
+    ========================================= */
+    .free-badge {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: #dcfce7;
+      color: #15803d;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+    }
+
+    /* =========================================
+       PDF ICON
+    ========================================= */
+    .pdf-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 62px;
+      height: 70px;
+      font-size: 52px;
+      filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.07));
+    }
+
+    /* =========================================
+       PDF CONTENT
+    ========================================= */
+    .pdf-content {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .pdf-title {
+      min-height: 40px;
+      margin-bottom: 7px;
+      color: #292929;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.65;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow: hidden;
+    }
+
+    .pdf-publisher {
+      min-height: 20px;
+      margin-bottom: 12px;
+      color: var(--muted-color);
+      font-size: 11px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* =========================================
+       DOWNLOAD BUTTON
+    ========================================= */
+    .download-btn {
+      position: relative;
+      isolation: isolate;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: 37px;
+      margin-top: auto;
+      padding: 8px 7px;
+      border: none;
+      border-radius: 9px;
+      background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(123, 63, 242, 0.18);
+      transition: box-shadow 0.25s ease, opacity 0.25s ease;
+    }
+
+    .download-btn span {
+      position: relative;
+      z-index: 2;
+    }
+
+    .download-btn::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -120%;
+      width: 70%;
+      height: 100%;
+      z-index: 1;
+      background: linear-gradient(110deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+      transform: skewX(-20deg);
+      animation: buttonShimmer 3.5s ease-in-out infinite;
+    }
+
+    @keyframes buttonShimmer {
+      0% { left: -120%; }
+      45%, 100% { left: 150%; }
+    }
+
+    .download-btn:hover {
+      box-shadow: 0 6px 18px rgba(123, 63, 242, 0.28);
+    }
+
+    .download-btn:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
+    /* =========================================
+       LOADING & EMPTY MESSAGE
+    ========================================= */
+    .loading-message,
+    .empty-message {
+      grid-column: 1 / -1;
+      padding: 35px 15px;
+      text-align: center;
+      color: #777777;
+      font-size: 14px;
+      background: rgba(255, 255, 255, 0.75);
+      border-radius: 14px;
+    }
+
+    .loading-message {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--primary-color);
+      font-weight: 600;
+    }
+
+    .loading-spinner {
+      width: 22px;
+      height: 22px;
+      border: 3px solid rgba(123, 63, 242, 0.15);
+      border-top-color: var(--primary-color);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* =========================================
+       TABLET AND DESKTOP
+    ========================================= */
+    @media (min-width: 768px) {
+      .app { padding: 25px 18px 45px; }
+      .pdf-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+      }
+      .pdf-card { padding: 13px; }
+      .pdf-card-top { min-height: 145px; }
+      .pdf-icon { width: 76px; height: 80px; font-size: 62px; }
+      .pdf-title { font-size: 14px; }
+      .pdf-publisher { font-size: 12px; }
+      .download-btn { min-height: 41px; font-size: 12px; }
+    }
+
+    /* =========================================
+       SMALL MOBILE
+    ========================================= */
+    @media (max-width: 360px) {
+      .app { padding-left: 9px; padding-right: 9px; }
+      .pdf-grid { gap: 9px; }
+      .pdf-card { padding: 8px; }
+      .pdf-card-top { min-height: 100px; }
+      .pdf-title { font-size: 12px; }
+      .download-btn { font-size: 10px; }
+    }
+
+    /* =========================================
+       REDUCED MOTION
+    ========================================= */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <!-- ANNOUNCEMENT -->
+    <div class="announcement">
+      <div class="announcement-icon">📢</div>
+      <div class="marquee-wrapper">
+        <div class="marquee-text">
+          পিডিএফ পাসওয়ার্ড👉 alibookshop.com || প্রকাশনীর মালিকদের প্রকাশিত ফ্রি সাজেশন বৈধভাবে সংগ্রহ করে শিক্ষার্থীদের জন্য শেয়ার করা হয়।
+        </div>
+      </div>
+    </div>
+
+    <!-- PUBLISHER FILTER -->
+    <div class="publisher-filter" id="publisherFilter" aria-label="প্রকাশনী নির্বাচন">
+      <button class="publisher-btn active" data-publisher="All" type="button">All</button>
+      <!-- publishers will be dynamically added via JS -->
+    </div>
+
+    <!-- PDF GRID -->
+    <section class="pdf-grid" id="pdfGrid" aria-live="polite">
+      <!-- Loading state initially -->
+      <div class="loading-message" id="loadingMessage">
+        <span class="loading-spinner"></span>
+        <span>লোড হচ্ছে...</span>
+      </div>
+    </section>
+  </main>
+
+  <!-- Firebase SDK (Compat version for simplicity) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <script>
+    // =========================================
+    // FIREBASE CONFIGURATION
+    // =========================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyCNMpgV1P2Pe2YHSIsJcZRnidQwQzWuoYc",
+      authDomain: "ali-book-shop-masud-imratul.firebaseapp.com",
+      projectId: "ali-book-shop-masud-imratul",
+      storageBucket: "ali-book-shop-masud-imratul.firebasestorage.app",
+      messagingSenderId: "32138663512",
+      appId: "1:32138663512:web:5eb476509f9fed9ce81c2d",
+      measurementId: "G-4QDLQ3T5YP"
+    };
+
+    // Initialize Firebase (compat)
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // =========================================
+    // STATE & ELEMENTS
+    // =========================================
+    const pdfGrid = document.getElementById("pdfGrid");
+    const publisherFilter = document.getElementById("publisherFilter");
+    const loadingMessage = document.getElementById("loadingMessage");
+
+    let allPDFs = [];              // raw data from Firestore
+    let selectedPublisher = "All";
+    let availablePublishers = [];   // dynamic list from data
+
+    // =========================================
+    // FETCH DATA FROM FIRESTORE
+    // collection: "telegramBot"
+    // fields: Title, pokhashoni, pdf link (case variations)
+    // =========================================
+    async function fetchPDFsFromFirestore() {
+      try {
+        // Show loading
+        pdfGrid.innerHTML = `
+          <div class="loading-message">
+            <span class="loading-spinner"></span>
+            <span>ডেটা লোড হচ্ছে...</span>
+          </div>
+        `;
+
+        // ✅ FIXED: "telegram bot" → "telegramBot"
+        const snapshot = await db.collection("telegramBot").get();
+
+        if (snapshot.empty) {
+          pdfGrid.innerHTML = `<div class="empty-message">📭 কোনো PDF পাওয়া যায়নি।</div>`;
+          return;
+        }
+
+        const pdfs = [];
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          // Robust field detection (Title / title, pokhashoni / publisher, pdf link / pdfLink)
+          const title = data.Title || data.title || "শিরোনামহীন";
+          const publisher = data.pokhashoni || data.publisher || data.Pokhashoni || "অজানা প্রকাশনী";
+          // pdf link can be "pdf link", "pdfLink", "pdf_link", "download", etc.
+          const downloadLink = data["pdf link"] || data.pdfLink || data.pdf_link || data.download || data.link || null;
+
+          pdfs.push({
+            id: doc.id,
+            title: title,
+            publisher: publisher,
+            download: downloadLink
+          });
+        });
+
+        allPDFs = pdfs;
+
+        // Extract unique publishers (filter out null/empty)
+        const publisherSet = new Set();
+        allPDFs.forEach(pdf => {
+          if (pdf.publisher && pdf.publisher.trim() !== "") {
+            publisherSet.add(pdf.publisher.trim());
+          }
+        });
+        availablePublishers = Array.from(publisherSet).sort();
+
+        // Build filter buttons dynamically
+        renderPublisherFilter();
+
+        // Render PDFs
+        renderPDFs();
+
+      } catch (error) {
+        console.error("Error fetching PDFs: ", error);
+        pdfGrid.innerHTML = `
+          <div class="empty-message" style="color: #c0392b;">
+            ⚠️ ডেটা লোড করতে সমস্যা হয়েছে।<br>
+            <small style="font-size: 12px; color: #777;">${error.message}</small>
+          </div>
+        `;
+      }
+    }
+
+    // =========================================
+    // RENDER PUBLISHER FILTER BUTTONS
+    // =========================================
+    function renderPublisherFilter() {
+      // Clear existing buttons but keep the "All" button structure
+      publisherFilter.innerHTML = `
+        <button class="publisher-btn active" data-publisher="All" type="button">All</button>
+      `;
+
+      // Add each unique publisher as a button
+      availablePublishers.forEach(pub => {
+        const btn = document.createElement("button");
+        btn.className = "publisher-btn";
+        btn.type = "button";
+        btn.dataset.publisher = pub;
+        btn.textContent = pub; // Use full name, CSS handles overflow
+        publisherFilter.appendChild(btn);
+      });
+
+      // Set active state based on selectedPublisher
+      document.querySelectorAll(".publisher-btn").forEach(btn => {
+        btn.classList.remove("active");
+        if (btn.dataset.publisher === selectedPublisher) {
+          btn.classList.add("active");
+        }
+      });
+    }
+
+    // =========================================
+    // RENDER PDF CARDS (filtered)
+    // =========================================
+    function renderPDFs() {
+      if (!allPDFs.length) {
+        pdfGrid.innerHTML = `<div class="empty-message">📭 কোনো PDF পাওয়া যায়নি।</div>`;
+        return;
+      }
+
+      const filtered = allPDFs.filter(pdf => {
+        if (selectedPublisher === "All") return true;
+        return pdf.publisher === selectedPublisher;
+      });
+
+      if (filtered.length === 0) {
+        pdfGrid.innerHTML = `<div class="empty-message">এই প্রকাশনীর কোনো PDF পাওয়া যায়নি।</div>`;
+        return;
+      }
+
+      pdfGrid.innerHTML = "";
+
+      filtered.forEach(pdf => {
+        const card = document.createElement("article");
+        card.className = "pdf-card";
+
+        // Top section
+        const top = document.createElement("div");
+        top.className = "pdf-card-top";
+
+        const freeBadge = document.createElement("div");
+        freeBadge.className = "free-badge";
+        freeBadge.textContent = "FREE";
+
+        const pdfIcon = document.createElement("div");
+        pdfIcon.className = "pdf-icon";
+        pdfIcon.textContent = "📄";
+
+        top.appendChild(freeBadge);
+        top.appendChild(pdfIcon);
+
+        // Content
+        const content = document.createElement("div");
+        content.className = "pdf-content";
+
+        const title = document.createElement("h3");
+        title.className = "pdf-title";
+        title.textContent = pdf.title;
+
+        const publisher = document.createElement("div");
+        publisher.className = "pdf-publisher";
+        publisher.textContent = pdf.publisher;
+
+        const downloadButton = document.createElement("button");
+        downloadButton.className = "download-btn";
+        downloadButton.type = "button";
+
+        const buttonText = document.createElement("span");
+        buttonText.textContent = "Download PDF";
+        downloadButton.appendChild(buttonText);
+
+        downloadButton.addEventListener("click", function () {
+          if (!pdf.download) {
+            alert("এই PDF এর ডাউনলোড লিংক এখনো যোগ করা হয়নি।");
+            return;
+          }
+          window.open(pdf.download, "_blank", "noopener,noreferrer");
+        });
+
+        content.appendChild(title);
+        content.appendChild(publisher);
+        content.appendChild(downloadButton);
+
+        card.appendChild(top);
+        card.appendChild(content);
+
+        pdfGrid.appendChild(card);
+      });
+    }
+
+    // =========================================
+    // PUBLISHER FILTER EVENT (delegation)
+    // =========================================
+    publisherFilter.addEventListener("click", function (event) {
+      const button = event.target.closest(".publisher-btn");
+      if (!button) return;
+
+      selectedPublisher = button.dataset.publisher;
+
+      // Update active class
+      document.querySelectorAll(".publisher-btn").forEach(btn => {
+        btn.classList.remove("active");
+      });
+      button.classList.add("active");
+
+      renderPDFs();
+    });
+
+    // =========================================
+    // BODY GRADIENT COLOR CHANGE EVERY MINUTE
+    // =========================================
+    const gradientColors = [
+      ["rgba(255, 99, 132, 0.10)", "rgba(255, 193, 7, 0.10)", "rgba(156, 39, 176, 0.10)", "rgba(76, 175, 80, 0.10)"],
+      ["rgba(255, 152, 0, 0.10)", "rgba(233, 30, 99, 0.10)", "rgba(0, 150, 136, 0.10)", "rgba(139, 195, 74, 0.10)"],
+      ["rgba(244, 67, 54, 0.10)", "rgba(255, 235, 59, 0.10)", "rgba(121, 85, 72, 0.10)", "rgba(205, 220, 57, 0.10)"],
+      ["rgba(255, 87, 34, 0.10)", "rgba(103, 58, 183, 0.10)", "rgba(0, 188, 212, 0.10)", "rgba(139, 195, 74, 0.10)"],
+      ["rgba(233, 30, 99, 0.10)", "rgba(255, 112, 67, 0.10)", "rgba(156, 39, 176, 0.10)", "rgba(205, 220, 57, 0.10)"]
+    ];
+
+    let gradientIndex = 0;
+
+    function changeBodyGradient() {
+      gradientIndex = (gradientIndex + 1) % gradientColors.length;
+      const colors = gradientColors[gradientIndex];
+      document.documentElement.style.setProperty(
+        "--body-gradient",
+        `linear-gradient(135deg, ${colors[0]}, ${colors[1]}, ${colors[2]}, ${colors[3]})`
+      );
+    }
+
+    setInterval(changeBodyGradient, 60000);
+
+    // =========================================
+    // INITIALIZATION
+    // =========================================
+    fetchPDFsFromFirestore();
+  </script>
+</body>
+</html>

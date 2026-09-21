@@ -319,9 +319,7 @@
     }
   </style>
 
-  <!-- ========================================= -->
-  <!-- ✅ MONETAG SDK (Zone ID: 11856429)        -->
-  <!-- ========================================= -->
+  <!-- ✅ MONETAG SDK -->
   <script src='//libtl.com/sdk.js' data-zone='11856429' data-sdk='show_11856429'></script>
 
 </head>
@@ -373,6 +371,24 @@
     let allPDFs = [];
     let selectedPublisher = "All";
     let availablePublishers = [];
+
+    // =========================================
+    // ✅ In-App Interstitial চালু করা
+    // =========================================
+    // ২টি বিজ্ঞাপন, ৩০ সেকেন্ড পরপর, ৫ সেকেন্ড পর প্রথমটা
+    // ইউজার নিজেই ক্লোজ করতে পারবে, ব্রাউজারে যাবে না
+    if (typeof show_11856429 === "function") {
+      show_11856429({
+        type: 'inApp',
+        inAppSettings: {
+          frequency: 2,
+          capping: 0.1,
+          interval: 30,
+          timeout: 5,
+          everyPage: false
+        }
+      });
+    }
 
     // =========================================
     // Firestore থেকে PDF ডেটা আনা
@@ -510,40 +526,15 @@
         downloadButton.appendChild(buttonText);
 
         // =========================================
-        // ✅ DOWNLOAD + REWARDED POPUP AD
+        // ✅ DOWNLOAD — সরাসরি, কোনো বিজ্ঞাপন ছাড়া
+        // (বিজ্ঞাপন অটো আসবে, In-App Interstitial থেকে)
         // =========================================
         downloadButton.addEventListener("click", function () {
           if (!pdf.download) {
-            alert("এই PDF এর ডাউনলোড লিংক এখনো যোগ করা হয়নি।");
+            alert("এই PDF এখনো যোগ করা হয়নি।");
             return;
           }
-
-          downloadButton.disabled = true;
-          buttonText.textContent = "বিজ্ঞাপন লোড হচ্ছে...";
-
-          // Monetag SDK চেক
-          if (typeof show_11856429 === "function") {
-            show_11856429('pop')
-              .then(() => {
-                // বিজ্ঞাপন দেখা শেষ ✅
-                buttonText.textContent = "Download PDF";
-                downloadButton.disabled = false;
-                window.open(pdf.download, "_blank", "noopener,noreferrer");
-              })
-              .catch((error) => {
-                // বিজ্ঞাপনে সমস্যা ❌
-                console.error("Ad error:", error);
-                buttonText.textContent = "Download PDF";
-                downloadButton.disabled = false;
-                alert("বিজ্ঞাপন লোড হয়নি, তবুও ডাউনলোড শুরু হচ্ছে।");
-                window.open(pdf.download, "_blank", "noopener,noreferrer");
-              });
-          } else {
-            // SDK লোড না হলে সরাসরি ডাউনলোড
-            buttonText.textContent = "Download PDF";
-            downloadButton.disabled = false;
-            window.open(pdf.download, "_blank", "noopener,noreferrer");
-          }
+          window.open(pdf.download, "_blank", "noopener,noreferrer");
         });
 
         content.appendChild(title);

@@ -373,24 +373,6 @@
     let availablePublishers = [];
 
     // =========================================
-    // ✅ In-App Interstitial চালু করা
-    // =========================================
-    // ২টি বিজ্ঞাপন, ৩০ সেকেন্ড পরপর, ৫ সেকেন্ড পর প্রথমটা
-    // ইউজার নিজেই ক্লোজ করতে পারবে, ব্রাউজারে যাবে না
-    if (typeof show_11856429 === "function") {
-      show_11856429({
-        type: 'inApp',
-        inAppSettings: {
-          frequency: 2,
-          capping: 0.1,
-          interval: 30,
-          timeout: 5,
-          everyPage: false
-        }
-      });
-    }
-
-    // =========================================
     // Firestore থেকে PDF ডেটা আনা
     // =========================================
     async function fetchPDFsFromFirestore() {
@@ -526,15 +508,41 @@
         downloadButton.appendChild(buttonText);
 
         // =========================================
-        // ✅ DOWNLOAD — সরাসরি, কোনো বিজ্ঞাপন ছাড়া
-        // (বিজ্ঞাপন অটো আসবে, In-App Interstitial থেকে)
+        // ✅ DOWNLOAD + REWARDED INTERSTITIAL
+        // ইউজার Download চাপলে → বিজ্ঞাপন → তারপর ডাউনলোড
         // =========================================
         downloadButton.addEventListener("click", function () {
           if (!pdf.download) {
             alert("এই PDF এখনো যোগ করা হয়নি।");
             return;
           }
-          window.open(pdf.download, "_blank", "noopener,noreferrer");
+
+          downloadButton.disabled = true;
+          buttonText.textContent = "লোড হচ্ছে...";
+
+          // Monetag Rewarded Interstitial
+          if (typeof show_11856429 === "function") {
+            show_11856429()
+              .then(() => {
+                // ইউজার বিজ্ঞাপন দেখেছে ✅
+                buttonText.textContent = "Download PDF";
+                downloadButton.disabled = false;
+                window.open(pdf.download, "_blank", "noopener,noreferrer");
+              })
+              .catch((error) => {
+                // বিজ্ঞাপনে সমস্যা ❌
+                console.error("Ad error:", error);
+                buttonText.textContent = "Download PDF";
+                downloadButton.disabled = false;
+                // তবুও ডাউনলোড দিবে (ইউজার আটকে না থাকে)
+                window.open(pdf.download, "_blank", "noopener,noreferrer");
+              });
+          } else {
+            // SDK না থাকলে সরাসরি ডাউনলোড
+            buttonText.textContent = "Download PDF";
+            downloadButton.disabled = false;
+            window.open(pdf.download, "_blank", "noopener,noreferrer");
+          }
         });
 
         content.appendChild(title);
